@@ -2,6 +2,7 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Login from '../views/Login.vue'
 import store from '../store' 
+import Layout from '@/views/layout/AdminLayout'
 
 Vue.use(VueRouter)
 
@@ -22,7 +23,23 @@ export const constantRoutes = [
     path: '/',
     redirect: '/admin/dashboard',
     hidden: true
-  }
+  },
+  {
+      path: '/dict-manage',
+      component: Layout,
+      hidden: true,  // 关键属性：设置为 true 则不会在侧边栏显示
+      children: [
+        {
+          path: 'index',
+          component: () => import('@/views/admin/system/DictDataList'),
+          name: 'DictData',
+          meta: { 
+            title: '字典数据', 
+            activeMenu: '/system/dict' // 关键配置：进入此页时，侧边栏依然高亮“字典管理”
+          }
+        }
+      ]
+    },
 ]
 
 const createRouter = () => new VueRouter({

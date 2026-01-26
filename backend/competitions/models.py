@@ -18,10 +18,13 @@ class Problem(models.Model):
 
 class Competition(models.Model):
     title = models.CharField(max_length=100, verbose_name="竞赛名称")
+    category = models.CharField(max_length=50, blank=True, null=True, verbose_name="竞赛类型")
     start_time = models.DateTimeField(verbose_name="开始时间")
     end_time = models.DateTimeField(verbose_name="结束时间")
-    problems = models.ManyToManyField(Problem, verbose_name="包含题目")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    problems = models.ManyToManyField(Problem, blank=True, related_name='competitions', verbose_name="包含题目")
     description = models.TextField(verbose_name="竞赛规则")
+    category = models.CharField(max_length=50, blank=True, null=True, verbose_name="竞赛类型")
 
     class Meta:
         db_table = 'tb_competition'
@@ -42,7 +45,7 @@ class Enrollment(models.Model):
         db_table = 'tb_enrollment'
         unique_together = ('competition', 'student')
         verbose_name = "竞赛报名"
-        verbose_name_plural = "报名审核"
+        verbose_name_plural = "报名审核管理"
 
 class JudgeRecord(models.Model):
     RESULT_CHOICES = (

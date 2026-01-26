@@ -2,6 +2,21 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 
+class ClassInfo(models.Model):
+    """班级信息"""
+    name = models.CharField(max_length=50, verbose_name="班级名称")
+    # 班主任 (关联到教师用户)
+    teacher = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='charge_classes', verbose_name="班主任")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tb_class'
+        verbose_name = "班级管理"
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.name
+
 class User(AbstractUser):
     """
     自定义用户模型
@@ -23,6 +38,9 @@ class User(AbstractUser):
     # 学生专属
     class_name = models.CharField(max_length=50, null=True, blank=True, verbose_name="班级")
     student_id = models.CharField(max_length=20, null=True, blank=True, verbose_name="学号")
+
+    class_info = models.ForeignKey(ClassInfo, on_delete=models.SET_NULL, null=True, blank=True, related_name='students',
+                                   verbose_name="所属班级")
 
     class Meta:
         db_table = 'tb_user'

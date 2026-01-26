@@ -45,7 +45,7 @@ class Menu(models.Model):
 
 
 class DictType(models.Model):
-    """字典类型"""
+    """"字典类型 (例如: 课程分类, 竞赛类型)"""
     name = models.CharField(max_length=100, verbose_name="字典名称")
     type = models.CharField(max_length=100, unique=True, verbose_name="字典类型")
     status = models.BooleanField(default=True, verbose_name="状态")
@@ -56,3 +56,14 @@ class DictType(models.Model):
         db_table = 'sys_dict_type'
         verbose_name = "字典类型"
         verbose_name_plural = "字典管理"
+
+class DictData(models.Model):
+    """字典数据 (例如: 算法课, Python基础)"""
+    dict_type = models.ForeignKey(DictType, on_delete=models.CASCADE, related_name='datas')
+    label = models.CharField(max_length=100, verbose_name="字典标签")
+    value = models.CharField(max_length=100, verbose_name="字典键值")
+    sort = models.IntegerField(default=0, verbose_name="排序")
+    is_default = models.BooleanField(default=False, verbose_name="是否默认")
+
+    class Meta:
+        ordering = ['sort']

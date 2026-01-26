@@ -1,60 +1,55 @@
-from rest_framework import viewsets, filters
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from .models import User
-from .serializers import UserSerializer
+from django_filters.rest_framework import DjangoFilterBackend
 
-# 这是一个独立的登录视图 (如果不想用 Token 库的话，这是最简单的写法)
-from rest_framework.views import APIView
-
+from .models import User, ClassInfo
+from .serializers import UserSerializer, ClassInfoSerializer
 
 class LoginView(APIView):
     """
     用户登录接口 (升级版：返回真实 Token)
     """
-    authentication_classes = []  # 不需要认证即可访问
+    authentication_classes = []
     permission_classes = []
 
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
 
-        # 验证账号密码
         user = authenticate(username=username, password=password)
 
         if user is not None:
-            # 🟢 [核心修改] 获取或创建真实的 DRF Token
-            # 注意：这会在数据库 authtoken_token 表中生成记录
             token, _ = Token.objects.get_or_create(user=user)
-
             return Response({
                 "msg": "登录成功",
-                "token": token.key,  # 👈 返回真实的 Token 字符串
+                "token": token.key,
                 "role": user.role,
                 "username": user.nickname or user.username
             })
         else:
             return Response({"msg": "账号或密码错误"}, status=400)
 
-
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    filterset_fields = ['role', 'class_name']
-
+class ClassInfoViewSet(viewsets.ModelViewSet):
+    queryset = ClassInfo.objects.all().order_by('-created_at')
+    serializer_class = ClassInfoSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
-
-    # 启用过滤和搜索
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-
-    # 精确过滤 (比如按角色、班级筛选)
-    filterset_fields = ['role', 'class_name']
-
-    # 模糊搜索 (比如按昵称、账号、手机号搜索)
+    filterset_fields = ['role', 'class_info']
     search_fields = ['nickname', 'username', 'phone']
+
+    @action(detail=True, methods=['post'])
+    def reset_password(self, request, pk=None):
+        """重置密码为 123456"""
+        user = self.get_object()
+        user.set_password('123456')
+        user.save()
+        return Response({"msg": "密码已重置为 123456"}, status=status.HTTP_200_OK)

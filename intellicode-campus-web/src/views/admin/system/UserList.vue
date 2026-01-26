@@ -31,6 +31,17 @@
       >
         <el-table-column prop="username" label="账号" align="center"></el-table-column>
         <el-table-column prop="nickname" label="用户昵称" align="center"></el-table-column>
+		<el-table-column 
+		    prop="display_class_name"   label="所属班级/管理班级" 
+		    align="center"
+		    width="150">
+		<template slot-scope="scope">
+		     <el-tag v-if="scope.row.display_class_name && scope.row.display_class_name !== '暂无班级' && scope.row.display_class_name !== '未分配'" size="small">
+		        {{ scope.row.display_class_name }}
+		     </el-tag>
+		     <span v-else style="color:#909399">-</span>
+		  </template>
+		</el-table-column>
         <el-table-column prop="role" label="角色" align="center">
              <template slot-scope="scope">
                 <el-tag>{{ scope.row.role === 1 ? '学生' : (scope.row.role === 2 ? '教师' : '管理员') }}</el-tag>
@@ -41,6 +52,7 @@
         <el-table-column label="操作" width="250" align="center">
           <template slot-scope="scope">
             <el-button type="text" class="btn-edit" icon="el-icon-edit" @click="handleEdit(scope.row)">修改</el-button>
+			<el-button type="text" style="color:#E6A23C" icon="el-icon-key" @click="handleResetPwd(scope.row)">重置密码</el-button>
             <el-button type="text" class="btn-delete" style="color:red;" icon="el-icon-delete" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
@@ -149,6 +161,13 @@ export default {
         }
       });
     },
+	handleResetPwd(row) {
+	  this.$confirm(`确认将用户 ${row.nickname} 的密码重置为 123456 吗?`, '警告', { type: 'warning' })
+	    .then(async () => {
+	      await this.$axios.post(`users/${row.id}/reset_password/`);
+	      this.$message.success("重置成功");
+	    }).catch(()=>{});
+	},
     handleDelete(row) {
       this.$confirm('确认删除该用户吗?', '警告', { type: 'warning' }).then(async () => {
         await this.$axios.delete(`users/${row.id}/`);

@@ -25,6 +25,16 @@
       <el-table :data="tableData" border stripe v-loading="loading" empty-text="暂无数据">
         <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
         <el-table-column prop="title" label="竞赛名称" show-overflow-tooltip></el-table-column>
+        
+        <el-table-column prop="category" label="竞赛类型" width="120" align="center">
+           <template slot-scope="scope">
+             <el-tag v-if="scope.row.category" size="small" :type="getCategoryTagType(scope.row.category)">
+                {{ formatCategory(scope.row.category) }}
+             </el-tag>
+             <span v-else>-</span>
+           </template>
+        </el-table-column>
+
         <el-table-column label="起止时间" width="300" align="center">
           <template slot-scope="scope">
             <div>{{ formatTime(scope.row.start_time) }}</div>
@@ -48,6 +58,16 @@
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="竞赛名称" prop="title">
           <el-input v-model="form.title" placeholder="请输入竞赛名称" />
+        </el-form-item>
+        <el-form-item label="竞赛类型" prop="category">
+          <el-select v-model="form.category" placeholder="请选择类型" style="width: 100%">
+            <el-option
+              v-for="dict in dictOptions"
+              :key="dict.value"
+              :label="dict.label"
+              :value="dict.value">
+            </el-option>
+          </el-select>
         </el-form-item>
         <el-form-item label="开始时间" prop="start_time">
           <el-date-picker v-model="form.start_time" type="datetime" placeholder="选择开始时间" style="width: 100%;" value-format="yyyy-MM-dd HH:mm:ss" />
@@ -87,12 +107,14 @@ export default {
       loading: true,
       tableData: [],
       problemOptions: [],
+      dictOptions: [],
       open: false,
       title: "",
       queryForm: { title: "" },
       form: {},
       rules: {
         title: [{ required: true, message: "必填项", trigger: "blur" }],
+        category: [{ required: true, message: "请选择竞赛类型", trigger: "change" }],
         start_time: [{ required: true, message: "必填项", trigger: "change" }],
         end_time: [{ required: true, message: "必填项", trigger: "change" }]
       }
@@ -101,6 +123,7 @@ export default {
   created() {
     this.fetchData();
     this.getProblems();
+    this.getDicts();
   },
   methods: {
     async fetchData() {
@@ -118,6 +141,32 @@ export default {
       const res = await this.$axios.get('problems/');
       this.problemOptions = res.data;
     },
+    async getDicts() {
+      try {
+        // 获取竞赛类型的字典数据
+        const res = await this.$axios.get('dict-data/', { 
+            params: { dict_type__type: 'competition_type' } 
+        });
+        this.dictOptions = res.data.results || res.data;
+      } catch (e) {
+        console.error("获取字典失败", e);
+      }
+    },
+    // 🟢 [新增] 格式化方法：将 value 转为 label
+    formatCategory(val) {
+      if (!val) return '-';
+      // 在 dictOptions 数组中查找匹配的项
+      const found = this.dictOptions.find(item => item.value === val);
+      // 找到了就返回 label (中文)，找不到就返回原始值
+      return found ? found.label : val;
+    },
+    // 🟢 [新增] (可选) 根据不同类型显示不同颜色的标签
+    getCategoryTagType(val) {
+      if (val === 'competition_type') return ''; // 默认蓝色
+      if (val === 'selection_test') return 'warning'; // 黄色
+      if (val === 'practice') return 'info'; // 灰色
+      return 'success'; // 绿色
+    },
     resetQuery() {
       this.queryForm = { title: "" };
       this.fetchData();
@@ -128,8 +177,7 @@ export default {
       this.open = true;
     },
     handleEdit(row) {
-      // 提取题目ID列表用于回显
-      const problemIds = row.problems.map(p => p.id);
+      const problemIds = row.problems ? row.problems.map(p => p.id) : [];
       this.form = { ...row, problems: problemIds };
       this.title = "修改竞赛";
       this.open = true;

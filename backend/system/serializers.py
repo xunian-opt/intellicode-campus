@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Role, Menu, DictType
+from .models import Role, Menu, DictType, DictData
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -21,5 +21,12 @@ class MenuSerializer(serializers.ModelSerializer):
 
 class DictTypeSerializer(serializers.ModelSerializer):
     class Meta:
+        # 🔴 注意：这里必须是 DictType，不能是 DictData
         model = DictType
+        fields = '__all__'
+
+class DictDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        # 🔴 这里才是 DictData
+        model = DictData
         fields = '__all__'

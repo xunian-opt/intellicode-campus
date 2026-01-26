@@ -10,7 +10,16 @@ class CompetitionSerializer(serializers.ModelSerializer):
     problems = ProblemSerializer(many=True, read_only=True)
     class Meta:
         model = Competition
-        fields = '__all__'
+        fields = [
+            'id',
+            'title',
+            'category',
+            'description',
+            'start_time',
+            'end_time',
+            'created_at',
+            'problems'
+        ]
 
 class EnrollmentSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.nickname', read_only=True)

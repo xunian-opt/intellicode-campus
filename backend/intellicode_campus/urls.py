@@ -3,8 +3,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 # 引入各个模块的 ViewSet
-from system.views import RoleViewSet, MenuViewSet, DictTypeViewSet, DashboardViewSet
-from users.views import LoginView, UserViewSet
+from system.views import RoleViewSet, MenuViewSet, DictTypeViewSet, DictDataViewSet, DashboardViewSet
+from users.views import LoginView, UserViewSet, ClassInfoViewSet
 from courses.views import CourseViewSet, AssignmentViewSet, AssignmentSubmissionViewSet
 from competitions.views import ProblemViewSet, CompetitionViewSet, EnrollmentViewSet, JudgeRecordViewSet
 from community.views import NoticeViewSet, AIChatHistoryViewSet
@@ -13,16 +13,19 @@ router = DefaultRouter()
 
 # --- 系统管理 (System) ---
 router.register(r'system/role', RoleViewSet)
-
-# 🔴 [核心修复] 添加 basename='menu'，因为 MenuViewSet使用了 get_queryset
 router.register(r'system/menu', MenuViewSet, basename='menu')
-
 router.register(r'system/dict', DictTypeViewSet)
-# 仪表盘接口
+
+# 🟢 [关键修复] 只保留这一行，删除原来的 'system/dict/data'
+router.register(r'dict-data', DictDataViewSet)
+
 router.register(r'dashboard', DashboardViewSet, basename='dashboard')
 
 # --- 用户管理 (Users) ---
 router.register(r'users', UserViewSet)
+
+# 🟢 [关键修复] 只保留这一行，删除原来的 'users/classes'
+router.register(r'classes', ClassInfoViewSet)
 
 # --- 课程中心 (Courses) ---
 router.register(r'courses', CourseViewSet)
