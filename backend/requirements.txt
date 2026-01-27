@@ -1,0 +1,8 @@
+Django>=3.2
+djangorestframework
+django-filter
+django-cors-headers
+Markdown
+pymysql
+Pillow
+requests

@@ -1,12 +1,11 @@
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Problem, Competition, JudgeRecord, Enrollment
+from .models import Problem, Competition, JudgeRecord, Enrollment, WrongQuestionBook
 from .serializers import ProblemSerializer, CompetitionSerializer, JudgeRecordSerializer, EnrollmentSerializer
 
 class ProblemViewSet(viewsets.ModelViewSet):
     queryset = Problem.objects.all()
     serializer_class = ProblemSerializer
-    # 搜索与过滤
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['difficulty']
     search_fields = ['title', 'content']
@@ -25,7 +24,25 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     search_fields = ['student__nickname', 'student__username', 'competition__title']
 
 class JudgeRecordViewSet(viewsets.ModelViewSet):
+    """
+    评测记录/成绩管理接口：查询所有提交记录
+    API URL: /api/judge_records/
+    """
     queryset = JudgeRecord.objects.all().order_by('-submit_time')
+    serializer_class = JudgeRecordSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['result', 'competition', 'student', 'problem']
+    search_fields = ['student__nickname', 'problem__title']
+
+# [新增] 错题本视图集
+class WrongQuestionBookViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    错题本管理接口：只返回非AC（错误）的记录
+    API URL: /api/wrong_books/
+    对应前端页面: /assessment/wrong-book
+    """
+    # 核心逻辑：自动过滤掉 result='AC' 的记录
+    queryset = WrongQuestionBook.objects.exclude(result='AC').order_by('-submit_time')
     serializer_class = JudgeRecordSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['result', 'competition', 'student', 'problem']

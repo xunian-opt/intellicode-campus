@@ -6,7 +6,7 @@ from rest_framework.routers import DefaultRouter
 from system.views import RoleViewSet, MenuViewSet, DictTypeViewSet, DictDataViewSet, DashboardViewSet
 from users.views import LoginView, UserViewSet, ClassInfoViewSet
 from courses.views import CourseViewSet, AssignmentViewSet, AssignmentSubmissionViewSet
-from competitions.views import ProblemViewSet, CompetitionViewSet, EnrollmentViewSet, JudgeRecordViewSet
+from competitions.views import ProblemViewSet, CompetitionViewSet, EnrollmentViewSet, JudgeRecordViewSet,WrongQuestionBookViewSet
 from community.views import NoticeViewSet, AIChatHistoryViewSet
 
 router = DefaultRouter()
@@ -36,7 +36,12 @@ router.register(r'submissions', AssignmentSubmissionViewSet)
 router.register(r'problems', ProblemViewSet)
 router.register(r'competitions', CompetitionViewSet)
 router.register(r'enrollments', EnrollmentViewSet)
+# [关键] 对应前端 /assessment/records (评测记录页面)
+# 前端 Axios 调用: this.$axios.get('judge_records/')
 router.register(r'judge_records', JudgeRecordViewSet)
+# [关键] 对应前端 /assessment/wrong-book (错题本页面)
+# 前端 Axios 调用: this.$axios.get('wrong_books/')
+router.register(r'wrong_books', WrongQuestionBookViewSet)
 
 # --- 社区与互动 (Community) ---
 router.register(r'notices', NoticeViewSet)
