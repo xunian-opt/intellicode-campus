@@ -1,7 +1,25 @@
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Problem, Competition, JudgeRecord, Enrollment, WrongQuestionBook
-from .serializers import ProblemSerializer, CompetitionSerializer, JudgeRecordSerializer, EnrollmentSerializer
+from .models import Problem, Competition, JudgeRecord, Enrollment, WrongQuestionBook, ChoiceProblem, ExamPaper
+from .serializers import ProblemSerializer, CompetitionSerializer, JudgeRecordSerializer, EnrollmentSerializer, ChoiceProblemSerializer, ExamPaperSerializer
+
+
+class ChoiceProblemViewSet(viewsets.ModelViewSet):
+    queryset = ChoiceProblem.objects.all()
+    serializer_class = ChoiceProblemSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['difficulty']
+    search_fields = ['title']
+
+class ExamPaperViewSet(viewsets.ModelViewSet):
+    queryset = ExamPaper.objects.all().order_by('-created_at')
+    serializer_class = ExamPaperSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['title']
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
 
 class ProblemViewSet(viewsets.ModelViewSet):
     queryset = Problem.objects.all()

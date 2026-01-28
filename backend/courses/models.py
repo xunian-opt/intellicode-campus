@@ -9,6 +9,8 @@ class Course(models.Model):
     category = models.CharField(max_length=50, verbose_name="课程分类")
     cover_img = models.ImageField(upload_to='courses/', null=True, blank=True, verbose_name="封面图")
     description = models.TextField(verbose_name="课程简介")
+    # 🟢 [新增] 课程大纲
+    outline = models.TextField(null=True, blank=True, verbose_name="课程大纲")
 
     view_count = models.IntegerField(default=0, verbose_name="浏览量")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
@@ -21,6 +23,23 @@ class Course(models.Model):
     def __str__(self):
         return self.title
 
+# 🟢 [新增] 课程资源模型 (视频、PPT、PDF)
+class CourseResource(models.Model):
+    TYPE_CHOICES = (
+        (1, '视频'),
+        (2, '课件(PPT/PDF)'),
+        (3, '其他资料')
+    )
+    course = models.ForeignKey(Course, related_name='resources', on_delete=models.CASCADE, verbose_name="所属课程")
+    name = models.CharField(max_length=100, verbose_name="资源名称")
+    file = models.FileField(upload_to='course_resources/', verbose_name="文件")
+    resource_type = models.IntegerField(choices=TYPE_CHOICES, default=2, verbose_name="资源类型")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="上传时间")
+
+    class Meta:
+        db_table = 'tb_course_resource'
+        verbose_name = "课程资源"
+        verbose_name_plural = "课程资源"
 
 class Assignment(models.Model):
     course = models.ForeignKey(Course, related_name='assignments', on_delete=models.CASCADE, verbose_name="所属课程")

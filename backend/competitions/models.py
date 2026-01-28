@@ -19,6 +19,41 @@ class Problem(models.Model):
     def __str__(self): return self.title
 
 
+# 🟢 [新增] 选择题模型
+class ChoiceProblem(models.Model):
+    DIFFICULTY_CHOICES = (('Easy', '简单'), ('Medium', '中等'), ('Hard', '困难'))
+    title = models.CharField(max_length=200, verbose_name="题干")
+    # 选项格式示例: [{"key": "A", "value": "选项A内容"}, {"key": "B", "value": "..."}]
+    options = models.JSONField(verbose_name="选项(JSON)")
+    correct_option = models.CharField(max_length=10, verbose_name="正确选项")  # 例如 "A" 或 "AB"
+    difficulty = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES, default='Easy', verbose_name="难度")
+    score = models.IntegerField(default=5, verbose_name="默认分值")
+
+    class Meta:
+        db_table = 'tb_choice_problem'
+        verbose_name = "选择题"
+        verbose_name_plural = "选择题库"
+
+
+# 🟢 [新增] 试卷模型 (类似“考试宝”组卷)
+class ExamPaper(models.Model):
+    title = models.CharField(max_length=100, verbose_name="试卷标题")
+    description = models.TextField(blank=True, null=True, verbose_name="试卷说明")
+    duration = models.IntegerField(default=90, verbose_name="考试时长(分钟)")
+    total_score = models.IntegerField(default=100, verbose_name="总分")
+
+    # 多对多关联题目
+    choice_problems = models.ManyToManyField(ChoiceProblem, blank=True, verbose_name="包含选择题")
+    programming_problems = models.ManyToManyField(Problem, blank=True, verbose_name="包含编程题")
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="出卷人")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+
+    class Meta:
+        db_table = 'tb_exam_paper'
+        verbose_name = "试卷"
+        verbose_name_plural = "试卷管理"
+
 class Competition(models.Model):
     title = models.CharField(max_length=100, verbose_name="竞赛名称")
     category = models.CharField(max_length=50, blank=True, null=True, verbose_name="竞赛类型")

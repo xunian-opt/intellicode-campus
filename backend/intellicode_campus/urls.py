@@ -5,8 +5,8 @@ from rest_framework.routers import DefaultRouter
 # 引入各个模块的 ViewSet
 from system.views import RoleViewSet, MenuViewSet, DictTypeViewSet, DictDataViewSet, DashboardViewSet
 from users.views import LoginView, UserViewSet, ClassInfoViewSet
-from courses.views import CourseViewSet, AssignmentViewSet, AssignmentSubmissionViewSet
-from competitions.views import ProblemViewSet, CompetitionViewSet, EnrollmentViewSet, JudgeRecordViewSet,WrongQuestionBookViewSet
+from courses.views import CourseViewSet, AssignmentViewSet, AssignmentSubmissionViewSet, CourseResourceViewSet
+from competitions.views import ProblemViewSet, CompetitionViewSet, EnrollmentViewSet, JudgeRecordViewSet,WrongQuestionBookViewSet,ChoiceProblemViewSet,ExamPaperViewSet
 from community.views import NoticeViewSet, AIChatHistoryViewSet
 
 router = DefaultRouter()
@@ -28,12 +28,17 @@ router.register(r'users', UserViewSet)
 router.register(r'classes', ClassInfoViewSet)
 
 # --- 课程中心 (Courses) ---
-router.register(r'courses', CourseViewSet)
+router.register(r'courses', CourseViewSet, basename='course') # 加 basename 避免覆盖冲突
+router.register(r'course_resources', CourseResourceViewSet)
 router.register(r'assignments', AssignmentViewSet)
 router.register(r'submissions', AssignmentSubmissionViewSet)
 
 # --- 竞赛活动管理 (Competitions) ---
 router.register(r'problems', ProblemViewSet)
+
+router.register(r'choice_problems', ChoiceProblemViewSet) # 🟢 [新增] 选择题
+
+router.register(r'exam_papers', ExamPaperViewSet) # 🟢 [新增] 试卷
 router.register(r'competitions', CompetitionViewSet)
 router.register(r'enrollments', EnrollmentViewSet)
 # [关键] 对应前端 /assessment/records (评测记录页面)

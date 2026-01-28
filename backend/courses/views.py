@@ -1,34 +1,44 @@
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Course, Assignment, AssignmentSubmission
-from .serializers import CourseSerializer, AssignmentSerializer, AssignmentSubmissionSerializer
+from .models import Course, Assignment, AssignmentSubmission, CourseResource
+from .serializers import CourseSerializer, AssignmentSerializer, AssignmentSubmissionSerializer, CourseResourceSerializer
 
 class CourseViewSet(viewsets.ModelViewSet):
-    queryset = Course.objects.all().order_by('-created_at')
+    # 权限：如果是教师，只能看自己创建的课程；管理员看所有
     serializer_class = CourseSerializer
-    # 启用搜索和过滤
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    # 精确过滤: 按分类、授课教师ID筛选
     filterset_fields = ['category', 'teacher']
-    # 模糊搜索: 按课程标题、教师姓名搜索
-    search_fields = ['title', 'teacher__nickname', 'teacher__username']
+    search_fields = ['title', 'teacher__nickname']
 
+    def get_queryset(self):
+        user = self.request.user
+        # 如果是教师(role=2)，只能管理自己的课程；管理员(role=3)管理所有
+        # 学生(role=1)也可以查看所有课程（前提是有权限配置）
+        if user.role == 2:
+            return Course.objects.filter(teacher=user).order_by('-created_at')
+        return Course.objects.all().order_by('-created_at')
+
+    def perform_create(self, serializer):
+        # 自动设置创建者
+        serializer.save(teacher=self.request.user)
+
+class CourseResourceViewSet(viewsets.ModelViewSet):
+    queryset = CourseResource.objects.all().order_by('-created_at')
+    serializer_class = CourseResourceSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['course', 'resource_type']
+
+# AssignmentViewSet 和 AssignmentSubmissionViewSet 保持不变...
 class AssignmentViewSet(viewsets.ModelViewSet):
     queryset = Assignment.objects.all().order_by('-created_at')
     serializer_class = AssignmentSerializer
-    # 启用搜索和过滤
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    # 精确过滤: 按课程ID筛选
     filterset_fields = ['course']
-    # 模糊搜索: 按作业标题、课程名称搜索
     search_fields = ['title', 'course__title']
 
 class AssignmentSubmissionViewSet(viewsets.ModelViewSet):
     queryset = AssignmentSubmission.objects.all().order_by('-submit_time')
     serializer_class = AssignmentSubmissionSerializer
-    # 启用搜索和过滤
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    # 精确过滤: 按作业ID、学生ID、是否已批改筛选
     filterset_fields = ['assignment', 'student', 'is_graded']
-    # 模糊搜索: 按学生昵称、学生账号搜索
     search_fields = ['student__nickname', 'student__username']
