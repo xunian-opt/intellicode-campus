@@ -2,9 +2,15 @@ from rest_framework import serializers
 from .models import Role, Menu, DictType, DictData
 
 class RoleSerializer(serializers.ModelSerializer):
+    # 读取时：返回菜单ID列表，方便前端树形控件回显
+    menu_ids = serializers.SerializerMethodField()
+
     class Meta:
         model = Role
         fields = '__all__'
+
+    def get_menu_ids(self, obj):
+        return list(obj.menus.values_list('id', flat=True))
 
 class MenuSerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()

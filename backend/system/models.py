@@ -9,6 +9,9 @@ class Role(models.Model):
     remark = models.CharField(max_length=200, null=True, blank=True, verbose_name="备注")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # 🟢 [新增] 角色与菜单的多对多关系
+    menus = models.ManyToManyField('Menu', blank=True, verbose_name="关联菜单")
+
     class Meta:
         db_table = 'sys_role'
         verbose_name = "角色"

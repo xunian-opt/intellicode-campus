@@ -42,6 +42,10 @@ class User(AbstractUser):
     class_info = models.ForeignKey(ClassInfo, on_delete=models.SET_NULL, null=True, blank=True, related_name='students',
                                    verbose_name="所属班级")
 
+    # 🟢 [新增] 关联到系统动态角色
+    system_role = models.ForeignKey('system.Role', on_delete=models.SET_NULL, null=True, blank=True,
+                                    verbose_name="系统角色")
+
     class Meta:
         db_table = 'tb_user'
         verbose_name = "用户"

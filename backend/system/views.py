@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters,status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -26,22 +26,78 @@ class RoleViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'key']
 
+# 🟢 [新增] 分配权限接口
+    @action(detail=True, methods=['put'])
+    def assign_permissions(self, request, pk=None):
+        role = self.get_object()
+        menu_ids = request.data.get('menu_ids', [])
+        # 设置多对多关系
+        role.menus.set(menu_ids)
+        return Response({"msg": "权限分配成功"}, status=status.HTTP_200_OK)
+
 
 class MenuViewSet(viewsets.ModelViewSet):
     """
-    菜单管理接口
+    菜单管理接口 & 动态路由获取
     """
     serializer_class = MenuSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['title']
 
     def get_queryset(self):
-        # 如果是列表请求，只返回一级菜单（前端通常递归处理）
-        # 但为了简单，这里也可以返回所有，由前端构建树
+        # 🟢 [核心修复] 列表页只返回顶级菜单 (parent is Null)
+        # 因为 Serializer 会自动递归获取子菜单 (children)，如果这里返回所有菜单，
+        # 会导致子菜单在前端出现两次（一次在 children 里，一次在根列表中），引发 Duplicate keys 报错。
         if self.action == 'list':
             return Menu.objects.filter(parent__isnull=True).order_by('order_num')
+
+        return Menu.objects.all().order_by('order_num')
+
+    @action(detail=False, methods=['get'])
+    def user_routers(self, request):
+        """
+        获取当前用户的动态路由树
+        """
+        user = self.request.user
+
+        # 1. 根据角色筛选菜单 (获取所有扁平数据)
+        if user.is_superuser or user.role == 3:  # 管理员
+            menus = Menu.objects.filter(menu_type__in=['M', 'C']).order_by('order_num')
+        elif user.system_role:  # 普通用户
+            menus = user.system_role.menus.filter(menu_type__in=['M', 'C']).order_by('order_num').distinct()
         else:
-            return Menu.objects.all().order_by('order_num')
+            return Response([])
+
+        # 2. 转换为列表字典
+        menu_list = list(menus.values(
+            'id', 'parent', 'title', 'path', 'component', 'icon', 'menu_type', 'order_num', 'perms'
+        ))
+
+        # 3. 手动构建纯净的树形结构
+        # (避免前端收到 "父节点 + 孤立子节点" 的混合数据)
+        menu_map = {item['id']: item for item in menu_list}
+        roots = []
+
+        for item in menu_list:
+            item['children'] = []
+            parent_id = item['parent']
+
+            # 如果父节点存在且也在权限列表中，则挂载到父节点下
+            if parent_id and parent_id in menu_map:
+                menu_map[parent_id]['children'].append(item)
+            # 只有真正的根节点（无父节点）才放入 roots 列表
+            elif not parent_id:
+                roots.append(item)
+
+        # 4. 子节点排序
+        for item in menu_list:
+            if item['children']:
+                item['children'].sort(key=lambda x: x['order_num'])
+
+        # 根节点排序
+        roots.sort(key=lambda x: x['order_num'])
+
+        return Response(roots)
 
 
 class DictTypeViewSet(viewsets.ModelViewSet):
