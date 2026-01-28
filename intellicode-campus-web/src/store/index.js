@@ -18,8 +18,7 @@ function filterAsyncRoutes(routes, parentPath = '') {
   const res = []
   
   routes.forEach(route => {
-    // 🔴 核心修改：过滤掉类型为 'F' (按钮) 的节点
-    // 如果后端没有返回 menu_type 字段，默认显示（兼容旧数据）
+    // 过滤掉类型为 'F' (按钮) 的节点
     if (route.menu_type === 'F') {
       return
     }
@@ -29,6 +28,12 @@ function filterAsyncRoutes(routes, parentPath = '') {
       path: route.path,
       component: loadView(route.component), 
       name: route.path, // 用 path 做 name
+      
+      // 🟢 [核心修改] 强制显示目录
+      // 如果是目录(M)，设置为 alwaysShow: true
+      // 这样即使该目录下只有一个子菜单，也会显示父级折叠框
+      alwaysShow: route.menu_type === 'M',
+      
       meta: { 
         title: route.title, 
         icon: route.icon 
@@ -39,9 +44,6 @@ function filterAsyncRoutes(routes, parentPath = '') {
     if (route.children && route.children.length) {
       // 递归过滤子节点
       tmp.children = filterAsyncRoutes(route.children, tmp.path)
-      
-      // 如果子节点全部被过滤掉了（比如全是按钮），且当前节点不是目录，
-      // 可以考虑是否还要保留当前节点（视需求而定，通常保留空目录也没关系）
     }
     
     res.push(tmp)
@@ -65,23 +67,32 @@ export default new Vuex.Store({
   actions: {
     GenerateRoutes({ commit }) {
       return new Promise((resolve, reject) => {
-        axios.get('system/menu/').then(res => {
-          const backEndMenus = res.data
+        
+        // 1. 获取 Token
+        const token = localStorage.getItem('token');
+        
+        // 2. 构造请求头
+        const config = {
+            headers: { 
+                'Authorization': token ? `Token ${token}` : '' 
+            }
+        };
+        
+        // 3. 发送请求获取路由
+        axios.get('system/menu/user_routers/', config).then(res => {
+            const backEndMenus = res.data
           
-          // 1. 生成路由表 (这里会自动过滤掉按钮)
-          const accessedRoutes = filterAsyncRoutes(backEndMenus)
+            // 4. 生成路由表
+            const accessedRoutes = filterAsyncRoutes(backEndMenus)
           
-          // 2. 将过滤后的路由表存入 Vuex，用于渲染侧边栏
-          // 注意：这里我们存的是 accessedRoutes，而不是原始 backEndMenus
-          // 这样侧边栏就只显示过滤后的菜单了
-          commit('SET_MENU', accessedRoutes)
-          
-          // 3. 追加 404
-          accessedRoutes.push({ path: '*', redirect: '/404', hidden: true })
-          
-          resolve(accessedRoutes)
+            commit('SET_MENU', accessedRoutes)
+            
+            // 添加 404 兜底路由
+            accessedRoutes.push({ path: '*', redirect: '/404', hidden: true })
+            
+            resolve(accessedRoutes)
         }).catch(error => {
-          reject(error)
+            reject(error)
         })
       })
     }

@@ -6,7 +6,7 @@
           <el-input v-model="queryForm.title" placeholder="输入课程名称搜索" clearable @keyup.enter.native="fetchData"/>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" icon="el-icon-search" @click="fetchData">查询</el-button>
+          <el-button type="primary" icon="el-icon-search" :loading="loading" @click="fetchData">查询</el-button>
           <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
@@ -16,7 +16,6 @@
       <div class="table-toolbar" style="margin-bottom:15px;">
         <el-button type="success" icon="el-icon-plus" size="small" @click="handleAdd">新建课程</el-button>
       </div>
-
       <el-table :data="tableData" border stripe v-loading="loading">
         <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
         <el-table-column prop="title" label="课程名称" show-overflow-tooltip></el-table-column>
@@ -34,7 +33,7 @@
       </el-table>
     </el-card>
 
-    <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body>
+    <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body :close-on-click-modal="false">
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="课程名称" prop="title">
           <el-input v-model="form.title" placeholder="请输入课程名称" />
@@ -50,7 +49,7 @@
         </el-form-item>
       </el-form>
       <div slot="footer">
-        <el-button type="primary" @click="submitForm">确 定</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="submitForm">确 定</el-button>
         <el-button @click="open = false">取 消</el-button>
       </div>
     </el-dialog>
@@ -93,6 +92,7 @@ export default {
   data() {
     return {
       loading: true,
+      submitLoading: false, // 🟢 新增
       tableData: [],
       open: false,
       resourceOpen: false,
@@ -131,12 +131,19 @@ export default {
     async submitForm() {
       this.$refs["form"].validate(async valid => {
         if (valid) {
-          const api = this.form.id ? this.$axios.patch : this.$axios.post;
-          const url = this.form.id ? `courses/${this.form.id}/` : 'courses/';
-          await api(url, this.form);
-          this.$message.success("操作成功");
-          this.open = false;
-          this.fetchData();
+          this.submitLoading = true; // 🟢 开启
+          try {
+            const api = this.form.id ? this.$axios.patch : this.$axios.post;
+            const url = this.form.id ? `courses/${this.form.id}/` : 'courses/';
+            await api(url, this.form);
+            this.$message.success("操作成功");
+            this.open = false;
+            this.fetchData();
+          } catch(e) {
+            console.error(e);
+          } finally {
+            this.submitLoading = false; // 🟢 关闭
+          }
         }
       });
     },
@@ -146,7 +153,7 @@ export default {
         this.fetchData();
       });
     },
-    // 🟢 资源管理相关
+    // ... 资源管理保持不变 ...
     handleResource(row) {
       this.currentCourseId = row.id;
       this.currentCourseTitle = row.title;
@@ -162,7 +169,6 @@ export default {
       formData.append('file', param.file);
       formData.append('course', this.currentCourseId);
       formData.append('name', param.file.name);
-      // 简单判断类型
       let type = 3;
       if (param.file.name.endsWith('.mp4')) type = 1;
       else if (param.file.name.match(/\.(pdf|ppt|pptx)$/)) type = 2;

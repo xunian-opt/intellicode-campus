@@ -27,7 +27,7 @@
       </el-table>
     </el-card>
 
-    <el-dialog :title="title" :visible.sync="open" fullscreen append-to-body>
+    <el-dialog :title="title" :visible.sync="open" fullscreen append-to-body :close-on-click-modal="false">
       <div style="padding: 0 20px;">
         <el-form ref="form" :model="form" :rules="rules" label-width="100px" inline style="border-bottom:1px solid #eee; margin-bottom:20px;">
           <el-form-item label="试卷标题" prop="title">
@@ -47,7 +47,6 @@
               <el-tab-pane label="选择题库" name="choice"></el-tab-pane>
               <el-tab-pane label="编程题库" name="program"></el-tab-pane>
             </el-tabs>
-            
             <div style="flex:1; overflow:auto; border:1px solid #e4e7ed; padding:10px;">
               <div v-show="activeTab === 'choice'">
                 <el-input placeholder="搜索选择题" v-model="searchChoice" size="small" suffix-icon="el-icon-search" style="margin-bottom:10px;"></el-input>
@@ -57,7 +56,6 @@
                   <el-table-column prop="difficulty" label="难度" width="80"></el-table-column>
                 </el-table>
               </div>
-
               <div v-show="activeTab === 'program'">
                 <el-input placeholder="搜索编程题" v-model="searchProg" size="small" suffix-icon="el-icon-search" style="margin-bottom:10px;"></el-input>
                 <el-table :data="filteredProgs" size="small" @selection-change="handleProgSelection">
@@ -90,7 +88,7 @@
       </div>
       <div slot="footer">
         <el-button @click="open = false">关 闭</el-button>
-        <el-button type="primary" @click="submitForm">保存试卷</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="submitForm">保存试卷</el-button>
       </div>
     </el-dialog>
   </div>
@@ -102,6 +100,7 @@ export default {
   data() {
     return {
       loading: false,
+      submitLoading: false, // 🟢 新增
       tableData: [],
       open: false,
       title: "",
@@ -114,7 +113,6 @@ export default {
       searchChoice: '',
       searchProg: '',
       
-      // 临时存储选中的对象，用于回显标题
       selectedChoiceRows: [],
       selectedProgRows: []
     };
@@ -129,7 +127,7 @@ export default {
   },
   created() {
     this.fetchData();
-    this.fetchAllQuestions(); // 预加载题库
+    this.fetchAllQuestions(); 
   },
   methods: {
     async fetchData() {
@@ -155,16 +153,13 @@ export default {
       this.form = JSON.parse(JSON.stringify(row));
       this.title = "编辑试卷";
       this.open = true;
-      // 这里可以加逻辑自动选中table中的行，暂略
     },
-    // 处理选择变化
     handleChoiceSelection(val) {
       this.form.choice_problems = val.map(v => v.id);
     },
     handleProgSelection(val) {
       this.form.programming_problems = val.map(v => v.id);
     },
-    // 辅助显示预览
     getChoiceTitle(id) {
       const q = this.allChoices.find(i => i.id === id);
       return q ? q.title : `题目ID:${id}`;
@@ -176,12 +171,19 @@ export default {
     async submitForm() {
       this.$refs["form"].validate(async valid => {
         if (valid) {
-          const api = this.form.id ? this.$axios.patch : this.$axios.post;
-          const url = this.form.id ? `exam_papers/${this.form.id}/` : 'exam_papers/';
-          await api(url, this.form);
-          this.$message.success("试卷保存成功");
-          this.open = false;
-          this.fetchData();
+          this.submitLoading = true; // 🟢 开启
+          try {
+            const api = this.form.id ? this.$axios.patch : this.$axios.post;
+            const url = this.form.id ? `exam_papers/${this.form.id}/` : 'exam_papers/';
+            await api(url, this.form);
+            this.$message.success("试卷保存成功");
+            this.open = false;
+            this.fetchData();
+          } catch(e) {
+            console.error(e);
+          } finally {
+            this.submitLoading = false; // 🟢 关闭
+          }
         }
       });
     },

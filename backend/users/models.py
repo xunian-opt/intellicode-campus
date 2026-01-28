@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from system.models import Role
 
 
 class ClassInfo(models.Model):
@@ -45,6 +46,22 @@ class User(AbstractUser):
     # 🟢 [新增] 关联到系统动态角色
     system_role = models.ForeignKey('system.Role', on_delete=models.SET_NULL, null=True, blank=True,
                                     verbose_name="系统角色")
+
+    def save(self, *args, **kwargs):
+        # 如果 system_role 为空，根据 role 自动填充
+        if not self.system_role:
+            try:
+                if self.role == 1:  # 学生
+                    self.system_role = Role.objects.filter(name='学生').first()
+                elif self.role == 2:  # 教师
+                    self.system_role = Role.objects.filter(name='教师').first()
+                elif self.role == 3:  # 管理员
+                    self.system_role = Role.objects.filter(name='管理员').first()
+            except Exception:
+                pass  # 防止迁移时 Role 表不存在报错
+
+        super().save(*args, **kwargs)
+
 
     class Meta:
         db_table = 'tb_user'

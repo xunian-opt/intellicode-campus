@@ -72,17 +72,12 @@ export default {
 
             this.$message.success("登录成功");
 
-            // 权限跳转逻辑
-            // 角色: 1-学生, 2-教师, 3-管理员
-            if (role === 1) {
-              this.$router.push('/student/dashboard');
-            } else if (role === 2) {
-              this.$router.push('/teacher/dashboard');
-            } else if (role === 3) {
-              this.$router.push('/admin/dashboard');
-            } else {
-              this.$message.warning("未知角色，请联系管理员");
-            }
+            // 🔴 [核心修改] 不要用 $router.push
+                      // 改用 window.location.href = '/' 进行强制刷新跳转
+                      // 这能保证 Vuex 状态被重置，重新触发 router.beforeEach 中的 GenerateRoutes
+            setTimeout(() => {
+                window.location.href = '/'; 
+            }, 500);
 
           } catch (error) {
             console.error(error);

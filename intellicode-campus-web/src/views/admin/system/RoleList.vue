@@ -23,7 +23,7 @@
       </el-table>
     </el-card>
 
-    <el-dialog :title="title" :visible.sync="open" width="500px">
+    <el-dialog :title="title" :visible.sync="open" width="500px" :close-on-click-modal="false">
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="角色名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入角色名称" />
@@ -36,12 +36,12 @@
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitForm">确 定</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="submitForm">确 定</el-button>
         <el-button @click="open = false">取 消</el-button>
       </div>
     </el-dialog>
 
-    <el-dialog title="分配菜单权限" :visible.sync="permOpen" width="500px">
+    <el-dialog title="分配菜单权限" :visible.sync="permOpen" width="500px" :close-on-click-modal="false">
       <el-form label-width="80px">
         <el-form-item label="角色名称">
           <el-input v-model="currentRole.name" disabled />
@@ -59,7 +59,7 @@
         </el-form-item>
       </el-form>
       <div slot="footer">
-        <el-button type="primary" @click="submitPermission">提 交</el-button>
+        <el-button type="primary" :loading="permLoading" @click="submitPermission">提 交</el-button>
         <el-button @click="permOpen = false">取 消</el-button>
       </div>
     </el-dialog>
@@ -72,13 +72,15 @@ export default {
   data() {
     return {
       loading: false,
+      submitLoading: false, // 🟢 新增：表单提交loading
+      permLoading: false,   // 🟢 新增：权限提交loading
       roleList: [],
       open: false,
-      permOpen: false, // 权限弹窗开关
+      permOpen: false,
       title: "",
       form: {},
-      currentRole: {}, // 当前操作的角色
-      menuOptions: [], // 菜单树数据
+      currentRole: {},
+      menuOptions: [],
       defaultProps: {
         children: 'children',
         label: 'title'
@@ -100,24 +102,15 @@ export default {
         this.roleList = res.data;
       } finally { this.loading = false; }
     },
-    // 获取完整菜单树
     async getMenuTreeselect() {
       const res = await this.$axios.get('system/menu/', { params: { tree: 'true' } });
       this.menuOptions = res.data;
     },
-    // 🟢 打开权限分配弹窗
     async handlePermission(row) {
       this.currentRole = row;
       this.permOpen = true;
-      
-      // 1. 获取所有菜单树
       await this.getMenuTreeselect();
-      
-      // 2. 设置已选中的节点 (row.menu_ids 是后端序列化返回的)
-      // 注意：ElementUI Tree 如果父节点选中，所有子节点都会选中。
-      // 为了避免“半选”问题，通常只设置叶子节点的选中状态，或者依靠后端返回准确的ID
       this.$nextTick(() => {
-        // 假设后端返回了 menu_ids
         if (row.menu_ids) {
            this.$refs.menuTree.setCheckedKeys(row.menu_ids);
         } else {
@@ -125,22 +118,23 @@ export default {
         }
       });
     },
-    // 🟢 提交权限
     async submitPermission() {
-      // 获取全选和半选的节点ID
       const checkedKeys = this.$refs.menuTree.getCheckedKeys();
       const halfCheckedKeys = this.$refs.menuTree.getHalfCheckedKeys();
       const finalKeys = [...checkedKeys, ...halfCheckedKeys];
 
+      this.permLoading = true; // 🟢 开启 loading
       try {
         await this.$axios.put(`system/role/${this.currentRole.id}/assign_permissions/`, {
           menu_ids: finalKeys
         });
         this.$message.success("权限分配成功");
         this.permOpen = false;
-        this.getList(); // 刷新列表
+        this.getList();
       } catch (e) {
         this.$message.error("操作失败");
+      } finally {
+        this.permLoading = false; // 🟢 关闭 loading
       }
     },
     handleAdd() {
@@ -156,14 +150,21 @@ export default {
     async submitForm() {
       this.$refs["form"].validate(async valid => {
         if (valid) {
-          if (this.form.id) {
-            await this.$axios.put(`system/role/${this.form.id}/`, this.form);
-          } else {
-            await this.$axios.post('system/role/', this.form);
+          this.submitLoading = true; // 🟢 开启 loading
+          try {
+            if (this.form.id) {
+              await this.$axios.put(`system/role/${this.form.id}/`, this.form);
+            } else {
+              await this.$axios.post('system/role/', this.form);
+            }
+            this.$message.success("操作成功");
+            this.open = false;
+            this.getList();
+          } catch(e) {
+            console.error(e);
+          } finally {
+            this.submitLoading = false; // 🟢 关闭 loading
           }
-          this.$message.success("操作成功");
-          this.open = false;
-          this.getList();
         }
       });
     },

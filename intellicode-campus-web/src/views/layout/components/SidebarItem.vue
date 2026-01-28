@@ -1,11 +1,10 @@
 <template>
   <div v-if="!item.hidden">
-    <template v-if="hasOneShowingChild(item.children, item) && (!onlyOneChild.children || onlyOneChild.noShowingChildren)">
+    <template v-if="hasOneShowingChild(item.children, item) && (!onlyOneChild.children || onlyOneChild.noShowingChildren) && !item.alwaysShow">
       <el-menu-item 
         :index="resolvePath(onlyOneChild.path)" 
         :class="{'submenu-title-noDropdown':!isNest}">
         <i :class="onlyOneChild.meta?.icon || onlyOneChild.icon || (item.meta && item.meta.icon)"></i>
-        
         <span slot="title">{{ onlyOneChild.meta?.title || onlyOneChild.title || (item.meta && item.meta.title) || item.title }}</span>
       </el-menu-item>
     </template>
@@ -13,7 +12,6 @@
     <el-submenu v-else ref="subMenu" :index="resolvePath(item.path)" popper-append-to-body>
       <template slot="title">
         <i :class="item.meta?.icon || item.icon || (item.meta && item.meta.icon)"></i>
-        
         <span slot="title">{{ item.meta?.title || item.title || (item.meta && item.meta.title) }}</span>
       </template>
       
@@ -30,6 +28,8 @@
 </template>
 
 <script>
+// 🔴 移除: import path from 'path' (会导致 webpack 5 报错)
+
 export default {
   name: 'SidebarItem',
   props: {
@@ -57,16 +57,23 @@ export default {
     resolvePath(routePath) {
       if (this.isExternal(routePath)) return routePath
       if (this.isExternal(this.basePath)) return this.basePath
-      if (routePath.startsWith('/')) return routePath
-
+      
+      // 🟢 [纯JS实现路径拼接] 替代 path.resolve
+      
+      // 1. 如果是绝对路径，直接返回
+      if (routePath.startsWith('/')) {
+        return routePath
+      }
+      
+      // 2. 拼接 basePath 和 routePath
       let base = this.basePath
-      if (base.length > 0 && !base.endsWith('/')) {
-        base += '/'
+      
+      // 确保 base 不以 / 结尾 (防止出现 //user)
+      if (base.endsWith('/')) {
+        base = base.slice(0, -1)
       }
-      if (base.length > 0 && !base.startsWith('/')) {
-        base = '/' + base
-      }
-      return base + routePath
+      
+      return base + '/' + routePath
     },
     isExternal(path) {
       return /^(https?:|mailto:|tel:)/.test(path)

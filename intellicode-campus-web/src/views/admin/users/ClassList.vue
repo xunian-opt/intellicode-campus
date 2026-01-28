@@ -11,7 +11,7 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" icon="el-icon-search" @click="fetchData">查询</el-button>
+          <el-button type="primary" icon="el-icon-search" :loading="loading" @click="fetchData">查询</el-button>
           <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
@@ -21,35 +21,34 @@
       <div class="table-toolbar" style="margin-bottom: 15px;">
         <el-button type="success" icon="el-icon-plus" size="small" @click="handleAdd">新建班级</el-button>
       </div>
-
       <el-table :data="tableData" border stripe v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
-        <el-table-column prop="name" label="班级名称" align="center"></el-table-column>
-        <el-table-column prop="teacher_name" label="班主任" align="center">
+         <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
+         <el-table-column prop="name" label="班级名称" align="center"></el-table-column>
+         <el-table-column prop="teacher_name" label="班主任" align="center">
+            <template slot-scope="scope">
+              <el-tag v-if="scope.row.teacher_name" size="small">{{ scope.row.teacher_name }}</el-tag>
+              <span v-else class="text-gray">-</span>
+            </template>
+         </el-table-column>
+         <el-table-column prop="student_count" label="学生人数" align="center" width="120">
            <template slot-scope="scope">
-             <el-tag v-if="scope.row.teacher_name" size="small">{{ scope.row.teacher_name }}</el-tag>
-             <span v-else class="text-gray">-</span>
+             <el-tag type="info" effect="plain">{{ scope.row.student_count || 0 }} 人</el-tag>
            </template>
-        </el-table-column>
-        <el-table-column prop="student_count" label="学生人数" align="center" width="120">
-          <template slot-scope="scope">
-            <el-tag type="info" effect="plain">{{ scope.row.student_count || 0 }} 人</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" align="center" width="180">
-           <template slot-scope="scope">{{ formatTime(scope.row.created_at) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" align="center" width="300">
-          <template slot-scope="scope">
-            <el-button type="text" icon="el-icon-edit" @click="handleEdit(scope.row)">编辑</el-button>
-            <el-button type="text" icon="el-icon-user" @click="handleStudents(scope.row)">学生管理</el-button>
-            <el-button type="text" style="color:red" icon="el-icon-delete" @click="handleDelete(scope.row)">删除</el-button>
-          </template>
-        </el-table-column>
+         </el-table-column>
+         <el-table-column prop="created_at" label="创建时间" align="center" width="180">
+            <template slot-scope="scope">{{ formatTime(scope.row.created_at) }}</template>
+         </el-table-column>
+         <el-table-column label="操作" align="center" width="300">
+           <template slot-scope="scope">
+             <el-button type="text" icon="el-icon-edit" @click="handleEdit(scope.row)">编辑</el-button>
+             <el-button type="text" icon="el-icon-user" @click="handleStudents(scope.row)">学生管理</el-button>
+             <el-button type="text" style="color:red" icon="el-icon-delete" @click="handleDelete(scope.row)">删除</el-button>
+           </template>
+         </el-table-column>
       </el-table>
     </el-card>
 
-    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
+    <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body :close-on-click-modal="false">
       <el-form :model="form" label-width="80px" :rules="rules" ref="form">
         <el-form-item label="班级名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入班级名称"></el-input>
@@ -62,13 +61,12 @@
       </el-form>
       <div slot="footer">
         <el-button @click="open = false">取 消</el-button>
-        <el-button type="primary" @click="submitForm">确 定</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="submitForm">确 定</el-button>
       </div>
     </el-dialog>
 
     <el-dialog :title="'管理学生 - ' + currentClassName" :visible.sync="studentOpen" width="900px" append-to-body top="5vh">
-      
-      <div style="margin-bottom: 15px; display: flex; justify-content: space-between;">
+       <div style="margin-bottom: 15px; display: flex; justify-content: space-between;">
         <el-input 
           v-model="studentQuery" 
           placeholder="在此处输入姓名或学号筛选列表..." 
@@ -132,7 +130,6 @@
         <el-button @click="studentOpen = false">关 闭</el-button>
       </div>
     </el-dialog>
-
   </div>
 </template>
 
@@ -141,34 +138,30 @@ export default {
   name: "ClassList",
   data() {
     return {
-      // --- 班级列表数据 ---
       loading: false,
+      submitLoading: false, // 🟢 新增
       tableData: [],
       queryForm: { name: "" },
       teachers: [],
-      
-      // --- 班级编辑数据 ---
       open: false,
       title: "",
       form: {},
       rules: {
         name: [{ required: true, message: "班级名称不能为空", trigger: "blur" }]
       },
-
-      // --- 学生管理数据 ---
+      // ... 学生管理数据 ...
       studentOpen: false,
       studentLoading: false,
-      allStudents: [],     // 存储所有学生原始数据
-      studentQuery: "",    // 弹窗内的筛选关键词
+      allStudents: [],
+      studentQuery: "",
       currentClassId: null,
       currentClassName: ""
     };
   },
   computed: {
-    // 前端过滤：根据搜索词筛选列表
     filteredStudentData() {
+      // ... 保持不变 ...
       if (!this.studentQuery) {
-        // 默认排序：本班学生排在最前面，方便查看
         return [...this.allStudents].sort((a, b) => {
           if (a.class_info === this.currentClassId && b.class_info !== this.currentClassId) return -1;
           if (a.class_info !== this.currentClassId && b.class_info === this.currentClassId) return 1;
@@ -187,7 +180,6 @@ export default {
     this.getTeachers(); 
   },
   methods: {
-    // ----------------- 班级列表逻辑 -----------------
     async fetchData() {
       this.loading = true;
       try {
@@ -211,8 +203,6 @@ export default {
       if(!time) return '-';
       return new Date(time).toLocaleString();
     },
-
-    // ----------------- 班级增删改逻辑 -----------------
     handleAdd() { 
       this.form = {}; 
       this.title="新建班级"; 
@@ -226,18 +216,26 @@ export default {
     async submitForm() {
       this.$refs["form"].validate(async valid => {
         if (valid) {
-          if(this.form.id) {
-            await this.$axios.patch(`classes/${this.form.id}/`, this.form);
-            this.$message.success("修改成功");
-          } else {
-            await this.$axios.post('classes/', this.form);
-            this.$message.success("新建成功");
+          this.submitLoading = true; // 🟢 开启
+          try {
+            if(this.form.id) {
+                await this.$axios.patch(`classes/${this.form.id}/`, this.form);
+                this.$message.success("修改成功");
+            } else {
+                await this.$axios.post('classes/', this.form);
+                this.$message.success("新建成功");
+            }
+            this.open = false; 
+            this.fetchData();
+          } catch(e) {
+            console.error(e);
+          } finally {
+            this.submitLoading = false; // 🟢 关闭
           }
-          this.open = false; 
-          this.fetchData();
         }
       });
     },
+    // ... 删除和学生管理逻辑保持不变 ...
     handleDelete(row) {
         this.$confirm('确认删除该班级? 删除后该班级学生将变为无班级状态。', '警告', { type: 'warning' })
         .then(async () => {
@@ -246,35 +244,23 @@ export default {
             this.fetchData();
         }).catch(()=>{});
     },
-
-    // ----------------- 学生管理逻辑 (改版) -----------------
-    
-    // 打开弹窗，加载所有学生
     handleStudents(row) {
         this.currentClassId = row.id;
         this.currentClassName = row.name;
         this.studentOpen = true;
-        this.studentQuery = ""; // 重置筛选
+        this.studentQuery = "";
         this.fetchAllStudents();
     },
-
-    // 获取所有学生列表
     async fetchAllStudents() {
         this.studentLoading = true;
         try {
-            // 获取所有角色为1(学生)的用户，不限班级
-            const res = await this.$axios.get('users/', { 
-                params: { role: 1, page_size: 1000 } // 确保拉取足够多的数据，如果有分页需后端配合或前端循环拉取
-            });
+            const res = await this.$axios.get('users/', { params: { role: 1, page_size: 1000 } });
             this.allStudents = res.data.results || res.data;
         } finally {
             this.studentLoading = false;
         }
     },
-
-    // 加入班级
     async addToClass(studentRow) {
-        // 如果学生已经在其他班级，给个提示
         if (studentRow.class_info && studentRow.class_info !== this.currentClassId) {
             try {
                 await this.$confirm(`该学生当前已在【${studentRow.display_class_name}】，确定要调入本班吗？`, '转班确认', {
@@ -282,40 +268,27 @@ export default {
                     cancelButtonText: '取消',
                     type: 'warning'
                 });
-            } catch(e) {
-                return; // 取消操作
-            }
+            } catch(e) { return; }
         }
-
         try {
-            await this.$axios.patch(`users/${studentRow.id}/`, {
-                class_info: this.currentClassId
-            });
+            await this.$axios.patch(`users/${studentRow.id}/`, { class_info: this.currentClassId });
             this.$message.success("加入成功");
-            // 更新本地列表状态，避免重新请求闪烁
             studentRow.class_info = this.currentClassId;
             studentRow.display_class_name = this.currentClassName;
-            this.fetchData(); // 刷新外部列表人数
+            this.fetchData();
         } catch (e) {
             this.$message.error("操作失败");
         }
     },
-
-    // 移出班级
     async removeFromClass(studentRow) {
         try {
             await this.$confirm(`确定将学生 ${studentRow.nickname} 移出本班吗?`, '提示', { type: 'warning' });
-            await this.$axios.patch(`users/${studentRow.id}/`, {
-                class_info: null
-            });
+            await this.$axios.patch(`users/${studentRow.id}/`, { class_info: null });
             this.$message.success("已移出");
-            // 更新本地数据
             studentRow.class_info = null;
             studentRow.display_class_name = "暂无班级";
-            this.fetchData(); // 刷新外部列表人数
-        } catch(e) {
-            // 取消或失败
-        }
+            this.fetchData();
+        } catch(e) {}
     }
   }
 };
