@@ -9,7 +9,8 @@
         <div style="text-align: center; color: #999; margin-bottom: 30px; font-size: 13px;">
           发布人：{{ notice.author_name }} &nbsp;|&nbsp; 
           发布时间：{{ new Date(notice.created_at).toLocaleString() }} &nbsp;|&nbsp;
-          类型：{{ notice.type_display }}
+          
+          类型：{{ getDictLabel(notice.type) }}
         </div>
         <div style="font-size: 16px; line-height: 1.8; white-space: pre-wrap;">{{ notice.content }}</div>
       </div>
@@ -19,10 +20,19 @@
 
 <script>
 export default {
-  data() { return { notice: {}, loading: false } },
+  data() { 
+    return { 
+      notice: {}, 
+      loading: false,
+      // 🟢 [新增] 存储字典数据
+      noticeDicts: [] 
+    } 
+  },
   created() {
     const id = this.$route.params.id;
     if(id) this.getDetail(id);
+    // 🟢 [新增] 加载字典
+    this.getDicts();
   },
   methods: {
     async getDetail(id) {
@@ -33,6 +43,21 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    // 🟢 [新增] 获取字典数据
+    async getDicts() {
+      try {
+        const res = await this.$axios.get('dict-data/', { params: { dict_type__type: 'notice_type' } });
+        this.noticeDicts = res.data.results || res.data;
+      } catch (e) {
+        console.error("加载字典失败", e);
+      }
+    },
+    // 🟢 [新增] 翻译类型文本
+    getDictLabel(value) {
+      if (!this.noticeDicts.length) return value || '...';
+      const found = this.noticeDicts.find(item => item.value == value);
+      return found ? found.label : value;
     }
   }
 }
