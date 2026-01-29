@@ -66,6 +66,7 @@ class DictData(models.Model):
     label = models.CharField(max_length=100, verbose_name="字典标签")
     value = models.CharField(max_length=100, verbose_name="字典键值")
     sort = models.IntegerField(default=0, verbose_name="排序")
+    list_class = models.CharField(max_length=100, default='default', verbose_name="回显样式")
     is_default = models.BooleanField(default=False, verbose_name="是否默认")
 
     class Meta:

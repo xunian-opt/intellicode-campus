@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.permissions import IsAuthenticated
 
 from .models import User, ClassInfo
 from .serializers import UserSerializer, ClassInfoSerializer
@@ -53,3 +54,9 @@ class UserViewSet(viewsets.ModelViewSet):
         user.set_password('123456')
         user.save()
         return Response({"msg": "密码已重置为 123456"}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def info(self, request):
+        user = request.user
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)

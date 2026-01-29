@@ -18,8 +18,29 @@
       </div>
       <el-table :data="tableData" border stripe v-loading="loading">
         <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
+        
+        <el-table-column label="封面图" width="120" align="center">
+          <template slot-scope="scope">
+            <el-image 
+              v-if="scope.row.cover_img"
+              style="width: 80px; height: 45px; border-radius: 4px;"
+              :src="scope.row.cover_img" 
+              fit="contain"
+              :preview-src-list="[scope.row.cover_img]">
+              <div slot="error" class="image-slot">
+                <i class="el-icon-picture-outline" style="color:#999"></i>
+              </div>
+            </el-image>
+            <span v-else>无</span>
+          </template>
+        </el-table-column>
+
         <el-table-column prop="title" label="课程名称" show-overflow-tooltip></el-table-column>
-        <el-table-column prop="teacher_name" label="授课教师" width="120" align="center"></el-table-column>
+        <el-table-column prop="teacher_name" label="授课教师" width="120" align="center">
+           <template slot-scope="scope">
+             <el-tag size="small" type="info">{{ scope.row.teacher_name || '未指定' }}</el-tag>
+           </template>
+        </el-table-column>
         <el-table-column prop="category" label="分类" width="120" align="center">
            <template slot-scope="scope"><el-tag>{{ scope.row.category }}</el-tag></template>
         </el-table-column>
@@ -33,11 +54,37 @@
       </el-table>
     </el-card>
 
-    <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body :close-on-click-modal="false">
+    <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body :close-on-click-modal="false" @close="resetForm">
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="课程名称" prop="title">
           <el-input v-model="form.title" placeholder="请输入课程名称" />
         </el-form-item>
+        
+        <el-form-item label="授课教师" prop="teacher" v-if="isAdmin">
+          <el-select v-model="form.teacher" placeholder="请选择授课教师" style="width: 100%" filterable clearable>
+            <el-option
+              v-for="item in teacherList"
+              :key="item.id"
+              :label="item.nickname + ' (' + item.username + ')'"
+              :value="item.id">
+            </el-option>
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="封面图" prop="cover_img">
+          <el-upload
+            class="avatar-uploader"
+            action=""
+            :auto-upload="false"
+            :show-file-list="false"
+            :on-change="handleFileChange"
+            accept="image/jpeg,image/png,image/jpg">
+            <img v-if="imageUrl" :src="imageUrl" class="avatar">
+            <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+          </el-upload>
+          <div style="font-size:12px; color:#999; margin-top:5px;">建议比例 16:9，支持 JPG/PNG</div>
+        </el-form-item>
+
         <el-form-item label="课程分类" prop="category">
           <el-input v-model="form.category" placeholder="例如: Python基础" />
         </el-form-item>
@@ -56,16 +103,11 @@
 
     <el-dialog :title="'课程资源 - ' + currentCourseTitle" :visible.sync="resourceOpen" width="800px" append-to-body>
       <div style="margin-bottom: 15px;">
-        <el-upload
-          class="upload-demo"
-          action="#"
-          :http-request="uploadFile"
-          :show-file-list="false">
+        <el-upload class="upload-demo" action="#" :http-request="uploadFile" :show-file-list="false">
           <el-button size="small" type="primary" icon="el-icon-upload">上传视频/课件</el-button>
           <div slot="tip" class="el-upload__tip" style="display:inline-block; margin-left:10px;">支持 MP4, PDF, PPT 等格式</div>
         </el-upload>
       </div>
-
       <el-table :data="resourceList" border stripe height="400">
         <el-table-column prop="name" label="资源名称"></el-table-column>
         <el-table-column prop="resource_type" label="类型" width="100" align="center">
@@ -92,68 +134,166 @@ export default {
   data() {
     return {
       loading: true,
-      submitLoading: false, // 🟢 新增
+      submitLoading: false,
       tableData: [],
+      teacherList: [],
       open: false,
       resourceOpen: false,
       title: "",
       queryForm: { title: "" },
-      form: {},
+      form: {
+        id: undefined,
+        title: '',
+        category: '',
+        teacher: undefined,
+        description: '',
+        outline: '',
+        cover_img: ''
+      },
+      imageUrl: "",
+      uploadRawFile: null,
       rules: {
         title: [{ required: true, message: "必填", trigger: "blur" }],
-        category: [{ required: true, message: "必填", trigger: "blur" }]
+        category: [{ required: true, message: "必填", trigger: "blur" }],
+        teacher: [{ required: true, message: "请选择授课教师", trigger: "change" }]
       },
       currentCourseId: null,
       currentCourseTitle: "",
       resourceList: []
     };
   },
-  created() { this.fetchData(); },
+  computed: {
+    isAdmin() {
+      const user = this.$store.state.user;
+      return user && user.role === 3;
+    }
+  },
+  created() { 
+    this.fetchData(); 
+    if (!this.$store.state.user || !this.$store.state.user.id) {
+        this.$store.dispatch('GetUserInfo');
+    }
+    if (this.isAdmin) {
+        this.fetchTeacherList();
+    }
+  },
   methods: {
     async fetchData() {
       this.loading = true;
       try {
         const res = await this.$axios.get('courses/', { params: { search: this.queryForm.title } });
-        this.tableData = res.data;
+        this.tableData = res.data.results || res.data;
       } finally { this.loading = false; }
     },
+    
+    async fetchTeacherList() {
+        try {
+            const res = await this.$axios.get('users/', { params: { role: 2, page_size: 1000 } });
+            this.teacherList = res.data.results || res.data;
+        } catch(e) {
+            console.error("获取教师列表失败", e);
+        }
+    },
+
     resetQuery() { this.queryForm.title = ""; this.fetchData(); },
+    
+    resetForm() {
+      this.form = {
+        id: undefined,
+        title: '',
+        category: '',
+        teacher: undefined,
+        description: '',
+        outline: '',
+        cover_img: ''
+      };
+      this.imageUrl = "";
+      this.uploadRawFile = null;
+      if (this.$refs.form) this.$refs.form.resetFields();
+    },
+
     handleAdd() {
-      this.form = {};
+      this.resetForm();
       this.title = "新增课程";
+      if (this.isAdmin && this.teacherList.length === 0) {
+          this.fetchTeacherList();
+      }
       this.open = true;
     },
+    
     handleEdit(row) {
-      this.form = { ...row };
+      this.resetForm();
+      this.form = JSON.parse(JSON.stringify(row));
+      if (typeof this.form.teacher === 'object' && this.form.teacher !== null) {
+          this.form.teacher = this.form.teacher.id;
+      }
+      this.imageUrl = row.cover_img; 
       this.title = "修改课程";
+      if (this.isAdmin && this.teacherList.length === 0) this.fetchTeacherList();
       this.open = true;
     },
+
+    handleFileChange(file) {
+      this.uploadRawFile = file.raw;
+      this.imageUrl = URL.createObjectURL(file.raw);
+    },
+
     async submitForm() {
       this.$refs["form"].validate(async valid => {
         if (valid) {
-          this.submitLoading = true; // 🟢 开启
+          this.submitLoading = true;
           try {
-            const api = this.form.id ? this.$axios.patch : this.$axios.post;
-            const url = this.form.id ? `courses/${this.form.id}/` : 'courses/';
-            await api(url, this.form);
+            const formData = new FormData();
+            formData.append('title', this.form.title);
+            formData.append('category', this.form.category);
+            formData.append('description', this.form.description || '');
+            formData.append('outline', this.form.outline || '');
+            
+            if (this.isAdmin) {
+                if (this.form.teacher) {
+                    formData.append('teacher', this.form.teacher);
+                }
+            } else {
+                const userId = this.$store.state.user?.id;
+                if(userId) formData.append('teacher', userId);
+            }
+
+            if (this.uploadRawFile) {
+              formData.append('cover_img', this.uploadRawFile);
+            }
+
+            if (this.form.id) {
+              await this.$axios.patch(`courses/${this.form.id}/`, formData);
+            } else {
+              await this.$axios.post('courses/', formData);
+            }
+            
             this.$message.success("操作成功");
             this.open = false;
             this.fetchData();
           } catch(e) {
             console.error(e);
+            if(e.response && e.response.data) {
+                const errData = e.response.data;
+                const errMsg = JSON.stringify(errData);
+                this.$message.error("操作失败: " + errMsg);
+            } else {
+                this.$message.error("操作失败");
+            }
           } finally {
-            this.submitLoading = false; // 🟢 关闭
+            this.submitLoading = false;
           }
         }
       });
     },
+
     handleDelete(row) {
       this.$confirm('确认删除?', '提示').then(async () => {
         await this.$axios.delete(`courses/${row.id}/`);
         this.fetchData();
       });
     },
-    // ... 资源管理保持不变 ...
+    
     handleResource(row) {
       this.currentCourseId = row.id;
       this.currentCourseTitle = row.title;
@@ -195,3 +335,37 @@ export default {
   }
 };
 </script>
+
+<style scoped>
+/* 🟢 [核心修改] 让图片上传预览区域自适应，不再强制裁剪 */
+.avatar-uploader .el-upload {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  /* 移除固定宽高，让内容撑开 */
+  display: inline-block; 
+}
+.avatar-uploader .el-upload:hover {
+  border-color: #409EFF;
+}
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 150px;
+  height: 80px;
+  line-height: 80px;
+  text-align: center;
+  border: 1px dashed #ccc;
+}
+.avatar {
+  /* 🟢 修改图片显示方式 */
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 250px; /* 限制最大高度，防止撑破弹窗 */
+  display: block;
+  object-fit: contain; /* 保持原图比例 */
+}
+</style>

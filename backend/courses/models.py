@@ -15,6 +15,9 @@ class Course(models.Model):
     view_count = models.IntegerField(default=0, verbose_name="浏览量")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
 
+    like_count = models.IntegerField(default=0, verbose_name="点赞数")
+    fav_count = models.IntegerField(default=0, verbose_name="收藏数")
+
     class Meta:
         db_table = 'tb_course'
         verbose_name = "课程"
@@ -71,3 +74,38 @@ class AssignmentSubmission(models.Model):
         db_table = 'tb_assignment_submission'
         verbose_name = "作业提交"
         verbose_name_plural = "学生作业批改"
+
+
+
+class CourseComment(models.Model):
+    """课程评论/讨论区"""
+    course = models.ForeignKey(Course, related_name='comments', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="评论人")
+    content = models.TextField(verbose_name="评论内容")
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, verbose_name="父评论")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tb_course_comment'
+        ordering = ['-created_at']
+        verbose_name = "课程评论"
+
+class CourseFavorite(models.Model):
+    """课程收藏"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, related_name='fav_records', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tb_course_fav'
+        unique_together = ('user', 'course')
+
+class CourseLike(models.Model):
+    """课程点赞"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, related_name='like_records', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tb_course_like'
+        unique_together = ('user', 'course')

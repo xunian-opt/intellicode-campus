@@ -54,7 +54,8 @@ function filterAsyncRoutes(routes, parentPath = '') {
 export default new Vuex.Store({
   state: {
     menuList: [], // 侧边栏菜单数据
-    isRoutesLoaded: false 
+    isRoutesLoaded: false,
+	user: {}   //用户信息状态
   },
   mutations: {
     SET_MENU(state, menuList) {
@@ -62,9 +63,31 @@ export default new Vuex.Store({
     },
     SET_LOADED(state, status) {
       state.isRoutesLoaded = status
-    }
+    },
+	// 🟢 [新增] 更新用户信息的方法
+	SET_USER(state, userInfo) {
+	  state.user = userInfo
+	},
+	    // 🟢 [新增] 单独更新头像的方法
+	SET_AVATAR(state, avatarUrl) {
+	  if (state.user) {
+	        // 使用 Vue.set 确保响应式更新
+	    Vue.set(state.user, 'avatar', avatarUrl)
+	 }
+	}
   },
   actions: {
+// 🟢 [新增] 获取用户信息的 Action (供 Layout 调用)
+    GetUserInfo({ commit }) {
+      return new Promise((resolve, reject) => {
+        axios.get('users/info/').then(res => {
+          commit('SET_USER', res.data)
+          resolve(res.data)
+        }).catch(error => {
+          reject(error)
+        })
+      })
+    },
     GenerateRoutes({ commit }) {
       return new Promise((resolve, reject) => {
         
