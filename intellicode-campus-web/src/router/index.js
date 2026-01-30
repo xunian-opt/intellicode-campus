@@ -69,6 +69,24 @@ export const constantRoutes = [
         component: () => import('@/views/student/course/Detail'),
         meta: { title: '课程详情' }
       },
+	  {
+      path: 'problems',
+      name: 'StudentProblemList',
+      component: () => import('@/views/student/competitions/ProblemList'),
+      meta: { title: '编程题库' }
+    },
+    {
+      path: 'problem/:id', // 详情页路由
+      name: 'StudentProblemDetail',
+      component: () => import('@/views/student/competitions/ProblemDetail'),
+      meta: { title: '做题页面', hideFooter: true } // hideFooter可选，用于全屏沉浸式
+    },
+    {
+      path: 'competitions',
+      name: 'StudentCompetitionList',
+      component: () => import('@/views/student/competitions/CompetitionList'),
+      meta: { title: '竞赛活动' }
+    },
       {
         path: 'profile',
         name: 'StudentProfile',

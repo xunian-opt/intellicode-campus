@@ -5,12 +5,18 @@
         <div class="logo">
           <i class="el-icon-school"></i> IntelliCode Campus
         </div>
+        
         <div class="nav-links">
           <router-link to="/student/home" active-class="active">首页</router-link>
           <router-link to="/student/courses" active-class="active">课程中心</router-link>
-          <router-link to="/student/competitions" active-class="active">编程竞赛</router-link>
+          
+          <router-link to="/student/problems" active-class="active">编程题库</router-link>
+          
+          <router-link to="/student/competitions" active-class="active">竞赛活动</router-link>
+          
           <router-link to="/student/community" active-class="active">社区讨论</router-link>
         </div>
+
         <div class="right-menu">
           <el-tooltip content="AI 编程助手" placement="bottom">
             <i class="el-icon-cpu ai-icon" @click="showAI = true"></i>
@@ -56,13 +62,10 @@ export default {
     return {
       showAI: false,
       unreadCount: 0,
-      // 🟢 [核心修复] 改为使用网络图片，防止本地文件缺失报错
       defaultAvatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
     }
   },
   computed: {
-// 🟢 [核心] 从 Vuex 获取 user 对象
-    // 只要 Vuex 里的 user 变了，这里的 userInfo 就会自动变
     ...mapState(['user']),
     
     userInfo() {
@@ -70,15 +73,12 @@ export default {
     }
   },
   created() {
-    // 🟢 [核心] 页面刷新时，主动获取一次用户信息存入 Vuex
-    // 防止刷新页面后头像丢失
     this.$store.dispatch('GetUserInfo');
   },
   
   methods: {
     handleCommand(cmd) {
       if (cmd === 'logout') {
-        // 退出登录逻辑
         this.$confirm('确定注销并退出系统吗？', '提示', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
@@ -87,10 +87,8 @@ export default {
           localStorage.clear();
           sessionStorage.clear();
           this.$router.push('/login');
-          location.reload(); // 刷新页面清空 Vuex
+          location.reload(); 
         }).catch(() => {
-          // 🟢 [核心修复] 捕获点击“取消”时的异常，防止报错
-          // 用户点击取消，什么都不做
         });
       } else if (cmd === 'profile') {
         this.$router.push('/student/profile');
@@ -133,6 +131,7 @@ export default {
       i { color: #409EFF; margin-right: 8px; font-size: 24px; }
     }
     
+    /* 导航链接样式 */
     .nav-links {
       display: flex;
       gap: 30px;
@@ -141,7 +140,9 @@ export default {
         color: #666;
         font-size: 16px;
         transition: color 0.3s;
+        /* 悬停或激活时的样式 */
         &.active, &:hover { color: #409EFF; font-weight: 500; }
+        /* Vue Router 自动激活样式 */
         &.router-link-active { color: #409EFF; font-weight: 500; border-bottom: 2px solid #409EFF; padding-bottom: 18px; }
       }
     }

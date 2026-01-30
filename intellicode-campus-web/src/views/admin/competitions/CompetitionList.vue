@@ -3,15 +3,10 @@
     <el-card class="search-card" shadow="never">
       <el-form :inline="true" :model="queryForm" size="small">
         <el-form-item label="竞赛名称">
-          <el-input 
-            v-model="queryForm.title" 
-            placeholder="请输入竞赛名称" 
-            clearable 
-            @keyup.enter.native="fetchData"
-          />
+          <el-input v-model="queryForm.title" placeholder="请输入名称" clearable @keyup.enter.native="fetchData"/>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="fetchData">查询</el-button>
+          <el-button type="primary" icon="el-icon-search" @click="fetchData">查询</el-button>
           <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
@@ -22,77 +17,76 @@
         <el-button type="success" icon="el-icon-plus" size="small" @click="handleAdd">新增竞赛</el-button>
       </div>
 
-      <el-table :data="tableData" border stripe v-loading="loading" empty-text="暂无数据">
+      <el-table :data="tableData" border stripe v-loading="loading">
         <el-table-column prop="id" label="ID" width="80" align="center"></el-table-column>
-        <el-table-column prop="title" label="竞赛名称" show-overflow-tooltip></el-table-column>
         
-        <el-table-column prop="category" label="竞赛类型" width="120" align="center">
-           <template slot-scope="scope">
-             <el-tag v-if="scope.row.category" size="small" :type="getCategoryTagType(scope.row.category)">
-                {{ formatCategory(scope.row.category) }}
-             </el-tag>
-             <span v-else>-</span>
-           </template>
-        </el-table-column>
-
-        <el-table-column label="起止时间" width="300" align="center">
+        <el-table-column label="背景图" width="120" align="center">
           <template slot-scope="scope">
-            <div>{{ formatTime(scope.row.start_time) }}</div>
-            <div style="color: #909399; font-size: 12px;">至</div>
-            <div>{{ formatTime(scope.row.end_time) }}</div>
+            <el-image 
+              v-if="scope.row.cover_img"
+              style="width: 80px; height: 45px; border-radius: 4px;"
+              :src="scope.row.cover_img" 
+              :preview-src-list="[scope.row.cover_img]">
+            </el-image>
+            <span v-else>无</span>
           </template>
         </el-table-column>
-        <el-table-column prop="problems" label="题目数量" width="100" align="center">
-           <template slot-scope="scope">{{ scope.row.problems ? scope.row.problems.length : 0 }}</template>
-        </el-table-column>
+
+        <el-table-column prop="title" label="竞赛名称" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="start_time" label="开始时间" width="160"></el-table-column>
+        <el-table-column prop="end_time" label="结束时间" width="160"></el-table-column>
         <el-table-column label="操作" width="200" align="center">
           <template slot-scope="scope">
-            <el-button type="text" class="btn-edit" icon="el-icon-edit" @click="handleEdit(scope.row)">修改</el-button>
-            <el-button type="text" class="btn-delete" style="color:red;" icon="el-icon-delete" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button type="text" icon="el-icon-edit" @click="handleEdit(scope.row)">修改</el-button>
+            <el-button type="text" style="color:red" icon="el-icon-delete" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
 
-    <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body>
-      <el-form ref="form" :model="form" :rules="rules" label-width="80px">
+    <el-dialog :title="title" :visible.sync="open" width="650px" append-to-body @close="resetForm">
+      <el-form ref="form" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="竞赛名称" prop="title">
           <el-input v-model="form.title" placeholder="请输入竞赛名称" />
         </el-form-item>
-        <el-form-item label="竞赛类型" prop="category">
-          <el-select v-model="form.category" placeholder="请选择类型" style="width: 100%">
-            <el-option
-              v-for="dict in dictOptions"
-              :key="dict.value"
-              :label="dict.label"
-              :value="dict.value">
-            </el-option>
-          </el-select>
+        
+        <el-form-item label="竞赛背景图" prop="cover_img">
+          <el-upload
+            class="avatar-uploader"
+            action=""
+            :auto-upload="false"
+            :show-file-list="false"
+            :on-change="handleFileChange"
+            accept="image/jpeg,image/png">
+            <img v-if="imageUrl" :src="imageUrl" class="avatar">
+            <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+          </el-upload>
+          <div style="font-size:12px; color:#999;">建议上传深色背景图，尺寸 800x450，支持 JPG/PNG</div>
         </el-form-item>
-        <el-form-item label="开始时间" prop="start_time">
-          <el-date-picker v-model="form.start_time" type="datetime" placeholder="选择开始时间" style="width: 100%;" value-format="yyyy-MM-dd HH:mm:ss" />
+
+        <el-row>
+          <el-col :span="12">
+            <el-form-item label="开始时间" prop="start_time">
+              <el-date-picker v-model="form.start_time" type="datetime" placeholder="选择日期时间" value-format="yyyy-MM-dd HH:mm:ss" style="width: 100%;"/>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="结束时间" prop="end_time">
+              <el-date-picker v-model="form.end_time" type="datetime" placeholder="选择日期时间" value-format="yyyy-MM-dd HH:mm:ss" style="width: 100%;"/>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="包含题目">
+           <el-input v-model="form.problem_ids_str" placeholder="自动关联，此处仅作展示 (开发中)" disabled />
         </el-form-item>
-        <el-form-item label="结束时间" prop="end_time">
-          <el-date-picker v-model="form.end_time" type="datetime" placeholder="选择结束时间" style="width: 100%;" value-format="yyyy-MM-dd HH:mm:ss" />
-        </el-form-item>
-        <el-form-item label="包含题目" prop="problems">
-           <el-select v-model="form.problems" multiple placeholder="请选择题目" style="width: 100%">
-             <el-option
-               v-for="item in problemOptions"
-               :key="item.id"
-               :label="item.title"
-               :value="item.id">
-               <span style="float: left">{{ item.title }}</span>
-               <span style="float: right; color: #8492a6; font-size: 13px">{{ item.difficulty }}</span>
-             </el-option>
-           </el-select>
-        </el-form-item>
+
         <el-form-item label="竞赛规则" prop="description">
-          <el-input type="textarea" :rows="4" v-model="form.description" placeholder="请输入竞赛规则说明" />
+          <el-input type="textarea" :rows="4" v-model="form.description" />
         </el-form-item>
       </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitForm">确 定</el-button>
+      <div slot="footer">
+        <el-button type="primary" :loading="submitLoading" @click="submitForm">确 定</el-button>
         <el-button @click="open = false">取 消</el-button>
       </div>
     </el-dialog>
@@ -101,118 +95,121 @@
 
 <script>
 export default {
-  name: "CompetitionList",
+  name: "AdminCompetitionList",
   data() {
     return {
       loading: true,
+      submitLoading: false,
       tableData: [],
-      problemOptions: [],
-      dictOptions: [],
       open: false,
       title: "",
       queryForm: { title: "" },
       form: {},
+      imageUrl: "",
+      uploadRawFile: null,
       rules: {
-        title: [{ required: true, message: "必填项", trigger: "blur" }],
-        category: [{ required: true, message: "请选择竞赛类型", trigger: "change" }],
-        start_time: [{ required: true, message: "必填项", trigger: "change" }],
-        end_time: [{ required: true, message: "必填项", trigger: "change" }]
+        title: [{ required: true, message: "必填", trigger: "blur" }],
+        start_time: [{ required: true, message: "必填", trigger: "change" }],
+        end_time: [{ required: true, message: "必填", trigger: "change" }]
       }
     };
   },
-  created() {
-    this.fetchData();
-    this.getProblems();
-    this.getDicts();
-  },
+  created() { this.fetchData(); },
   methods: {
     async fetchData() {
       this.loading = true;
       try {
-        const params = {};
-        if (this.queryForm.title) params.search = this.queryForm.title;
-        const res = await this.$axios.get('competitions/', { params });
-        this.tableData = res.data;
-      } finally {
-        this.loading = false;
-      }
+        const res = await this.$axios.get('competitions/', { params: this.queryForm });
+        this.tableData = res.data.results || res.data;
+      } finally { this.loading = false; }
     },
-    async getProblems() {
-      const res = await this.$axios.get('problems/');
-      this.problemOptions = res.data;
-    },
-    async getDicts() {
-      try {
-        // 获取竞赛类型的字典数据
-        const res = await this.$axios.get('dict-data/', { 
-            params: { dict_type__type: 'competition_type' } 
-        });
-        this.dictOptions = res.data.results || res.data;
-      } catch (e) {
-        console.error("获取字典失败", e);
-      }
-    },
-    // 🟢 [新增] 格式化方法：将 value 转为 label
-    formatCategory(val) {
-      if (!val) return '-';
-      // 在 dictOptions 数组中查找匹配的项
-      const found = this.dictOptions.find(item => item.value === val);
-      // 找到了就返回 label (中文)，找不到就返回原始值
-      return found ? found.label : val;
-    },
-    // 🟢 [新增] (可选) 根据不同类型显示不同颜色的标签
-    getCategoryTagType(val) {
-      if (val === 'competition_type') return ''; // 默认蓝色
-      if (val === 'selection_test') return 'warning'; // 黄色
-      if (val === 'practice') return 'info'; // 灰色
-      return 'success'; // 绿色
-    },
-    resetQuery() {
-      this.queryForm = { title: "" };
-      this.fetchData();
+    resetQuery() { this.queryForm = {}; this.fetchData(); },
+    
+    resetForm() {
+      this.form = {};
+      this.imageUrl = "";
+      this.uploadRawFile = null;
+      if(this.$refs.form) this.$refs.form.resetFields();
     },
     handleAdd() {
-      this.form = { problems: [] };
+      this.resetForm();
       this.title = "新增竞赛";
       this.open = true;
     },
     handleEdit(row) {
-      const problemIds = row.problems ? row.problems.map(p => p.id) : [];
-      this.form = { ...row, problems: problemIds };
+      this.resetForm();
+      this.form = { ...row };
+      this.imageUrl = row.cover_img;
       this.title = "修改竞赛";
       this.open = true;
     },
-    submitForm() {
+    handleFileChange(file) {
+      this.uploadRawFile = file.raw;
+      this.imageUrl = URL.createObjectURL(file.raw);
+    },
+    async submitForm() {
       this.$refs["form"].validate(async valid => {
         if (valid) {
-          if (this.form.id) {
-            await this.$axios.patch(`competitions/${this.form.id}/`, this.form);
-            this.$message.success("修改成功");
-          } else {
-            await this.$axios.post('competitions/', this.form);
-            this.$message.success("新增成功");
+          this.submitLoading = true;
+          try {
+            const formData = new FormData();
+            Object.keys(this.form).forEach(key => {
+                if (this.form[key] !== null && key !== 'cover_img' && key !== 'problems') {
+                    formData.append(key, this.form[key]);
+                }
+            });
+            
+            if (this.uploadRawFile) {
+                formData.append('cover_img', this.uploadRawFile);
+            }
+
+            if (this.form.id) {
+              await this.$axios.patch(`competitions/${this.form.id}/`, formData);
+            } else {
+              await this.$axios.post('competitions/', formData);
+            }
+            this.$message.success("操作成功");
+            this.open = false;
+            this.fetchData();
+          } catch(e) {
+            this.$message.error("操作失败");
+          } finally {
+            this.submitLoading = false;
           }
-          this.open = false;
-          this.fetchData();
         }
       });
     },
     handleDelete(row) {
-      this.$confirm('确认删除?', '警告', { type: 'warning' }).then(async () => {
+      this.$confirm('确认删除?', '提示').then(async () => {
         await this.$axios.delete(`competitions/${row.id}/`);
-        this.$message.success("删除成功");
         this.fetchData();
-      }).catch(() => {});
-    },
-    formatTime(time) {
-      return time ? new Date(time).toLocaleString() : '';
+      });
     }
   }
 };
 </script>
 
 <style scoped>
-.btn-edit { color: #67C23A; }
-.search-card { border: none; }
-.table-card { border: none; }
+.avatar-uploader .el-upload {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.avatar-uploader .el-upload:hover { border-color: #409EFF; }
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 150px;
+  height: 80px;
+  line-height: 80px;
+  text-align: center;
+}
+.avatar {
+  width: 150px;
+  height: 80px;
+  display: block;
+  object-fit: cover;
+}
 </style>

@@ -57,6 +57,7 @@ class ExamPaper(models.Model):
 class Competition(models.Model):
     title = models.CharField(max_length=100, verbose_name="竞赛名称")
     category = models.CharField(max_length=50, blank=True, null=True, verbose_name="竞赛类型")
+    cover_img = models.ImageField(upload_to='competitions/', blank=True, null=True, verbose_name="封面/背景图")
     start_time = models.DateTimeField(verbose_name="开始时间")
     end_time = models.DateTimeField(verbose_name="结束时间")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
